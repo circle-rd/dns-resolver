@@ -75,8 +75,9 @@ docker compose up -d
 | `ZONE_RELOAD`       | No       | `30s`     | CoreDNS reload interval for `/etc/coredns/zone`                                              |
 | `DOCKERGEN_WAIT`    | No       | `5s:30s`  | docker-gen debounce interval (default 5 s–30 s)                                              |
 
-> Note: `HOST_IP` is typically the IP of the host running the container, but can also be a local IP of a router or other device.
-> Production Tips: On a docker infrastructure with few containers (stable), `DOCKERGEN=5s:30s` + `HOSTS_RELOAD=15s` is recommended. On a very dynamic infrastructure with many containers (unstable), `DOCKERGEN=1s:5s` + `HOSTS_RELOAD=5s` is recommended.
+> **Note:** `HOST_IP` is typically the IP of the host running the container, but can also be a local IP of a router or other device.
+
+> **Production Tips:** On a docker infrastructure with few containers (stable), `DOCKERGEN=5s:30s` + `HOSTS_RELOAD=15s` is recommended. On a very dynamic infrastructure with many containers (unstable), `DOCKERGEN=1s:5s` + `HOSTS_RELOAD=5s` is recommended.
 
 ### Authoritative vs split-horizon
 
