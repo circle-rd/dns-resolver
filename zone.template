@@ -1,0 +1,24 @@
+; Zone file for ${DOMAIN}
+; Serial: ${SERIAL}
+
+$TTL 300
+$ORIGIN ${DOMAIN}.
+
+; SOA — this server is primary and sole authority for the zone
+${DOMAIN}. 300 IN SOA ns.${DOMAIN}. hostmaster.${DOMAIN}. (
+                  ${SERIAL} ; serial   (YYYYMMDDNN)
+                  3600      ; refresh  (1 hour)
+                  900       ; retry    (15 min)
+                  604800    ; expire   (1 week)
+                  300 )     ; minimum TTL (5 min)
+
+; Name server
+${DOMAIN}. 300 IN NS  ns.${DOMAIN}.
+ns          300 IN A   ${HOST_IP}
+
+; Root domain
+${DOMAIN}. 300 IN A   ${HOST_IP}
+
+; Wildcard: every subdomain resolves to HOST_IP
+; Traefik inspects the Host() header and routes to the correct service.
+*           300 IN A   ${HOST_IP}

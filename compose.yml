@@ -1,0 +1,103 @@
+# dns-resolver — example compose for a larger project
+#
+# Drop this service block into your project's compose.yml.
+# The single dns image replaces the previous two-service setup
+# (dns + dns-watcher) and requires no shared volume.
+#
+# To enable ACME DNS-01 challenge support:
+#   1. Set ACME_DNS_ENABLED=true in your .env
+#   2. Keep the acme-dns service below (or remove it if not needed)
+#   3. Point Traefik's lego acmedns provider to http://acme-dns:80
+#
+# Prerequisites:
+#   - A .env file with DOMAIN, HOST_IP (and optionally DNS_UPSTREAM,
+#     DNS_AUTHORITATIVE, ACME_DNS_ENABLED) — see .env.example.
+#   - The dns-net network shared with Traefik and your other services.
+#
+# Requires: Docker Compose CLI v2.24+ (for configs.content interpolation)
+
+volumes:
+  acme_dns_data:
+
+configs:
+  acme_dns_config:
+    content: |
+      [general]
+      listen = "0.0.0.0:53"
+      protocol = "both"
+      domain = "auth.${DOMAIN}"
+      nsname = "acme-dns.${DOMAIN}"
+      nsadmin = "hostmaster.${DOMAIN}"
+      debug = false
+
+      [database]
+      engine = "sqlite3"
+      connection = "/var/lib/acme-dns/acme-dns.db"
+
+      [api]
+      ip = "0.0.0.0"
+      port = "80"
+      tls = "none"
+      disable_registration = false
+      autoregister = false
+      use_header = false
+
+      [logconfig]
+      loglevel = "info"
+      logtype = "stdout"
+      logformat = "text"
+
+networks:
+  dns-net:
+    name: dns-net
+
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+
+  # Internal DNS resolver with automatic container discovery.
+  # All *.${DOMAIN} queries resolve to ${HOST_IP}; Traefik routes
+  # each request to the correct service via the Host() header.
+  # When ACME_DNS_ENABLED=true, forwards auth.${DOMAIN} to the acme-dns sidecar.
+  dns:
+    image: ghcr.io/circle-rd/dns-resolver:latest
+    container_name: dns
+    <<: *restart
+    logging: *logging
+    ports:
+      - "${HOST_IP}:53:53/udp"
+      - "${HOST_IP}:53:53/tcp"
+    environment:
+      - DOMAIN=${DOMAIN}
+      - HOST_IP=${HOST_IP}
+      - DNS_UPSTREAM=${DNS_UPSTREAM:-1.1.1.1}
+      - DNS_AUTHORITATIVE=${DNS_AUTHORITATIVE:-true}
+      - ACME_DNS_ENABLED=${ACME_DNS_ENABLED:-false}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - dns-net
+
+  # ACME DNS-01 challenge sidecar.
+  # Exposes a REST API (port 80) for writing _acme-challenge TXT records,
+  # and a DNS server (port 53) that serves them to the internal CA.
+  # Remove this service if ACME_DNS_ENABLED is not needed.
+  acme-dns:
+    image: joohoi/acme-dns:latest
+    container_name: acme-dns
+    <<: *restart
+    logging: *logging
+    configs:
+      - source: acme_dns_config
+        target: /etc/acme-dns/config.cfg
+    volumes:
+      - acme_dns_data:/var/lib/acme-dns
+    networks:
+      - dns-net
