@@ -11,11 +11,10 @@
 # dynamically-updated hosts file (container name → container IP).
 ${DOMAIN}:53 {
     file /etc/coredns/zones/db.${DOMAIN} {
-        reload 30s
+        reload ${ZONE_RELOAD}
     }
     hosts /etc/coredns/hosts {
-        # Reload the hosts file every 15 s (dns-watcher updates it on changes)
-        reload 15s
+        reload ${HOSTS_RELOAD}
         fallthrough
     }
     ${DNS_DOMAIN_FORWARD}

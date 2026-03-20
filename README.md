@@ -36,7 +36,7 @@ flowchart LR
     traefik --> svc2
 ```
 
-> docker-gen watches the Docker socket and rewrites `/etc/coredns/hosts` on every container event (5 s–30 s debounce). CoreDNS reloads the file every 15 s, making new containers resolvable within seconds.
+> docker-gen watches the Docker socket and rewrites `/etc/coredns/hosts` on every container event (`DOCKERGEN_WAIT` debounce, default 5 s–30 s). CoreDNS reloads the file at `HOSTS_RELOAD` interval (default 15 s), making new containers resolvable within seconds.
 
 ---
 
@@ -71,6 +71,12 @@ docker compose up -d
 | `DNS_UPSTREAM`      | No       | `1.1.1.1` | Upstream resolver for external queries                                                       |
 | `DNS_AUTHORITATIVE` | No       | `true`    | `true` → NXDOMAIN for unknown names; `false` → forward unknowns to upstream                  |
 | `ACME_DNS_ENABLED`  | No       | `false`   | Enable ACME DNS-01 support; adds a CoreDNS forward stanza for `auth.DOMAIN` (`true`/`false`) |
+| `HOSTS_RELOAD`      | No       | `15s`     | CoreDNS reload interval for `/etc/coredns/hosts`                                             |
+| `ZONE_RELOAD`       | No       | `30s`     | CoreDNS reload interval for `/etc/coredns/zone`                                              |
+| `DOCKERGEN_WAIT`    | No       | `5s:30s`  | docker-gen debounce interval (default 5 s–30 s)                                              |
+
+> Note: `HOST_IP` is typically the IP of the host running the container, but can also be a local IP of a router or other device.
+> Production Tips: On a docker infrastructure with few containers (stable), `DOCKERGEN=5s:30s` + `HOSTS_RELOAD=15s` is recommended. On a very dynamic infrastructure with many containers (unstable), `DOCKERGEN=1s:5s` + `HOSTS_RELOAD=5s` is recommended.
 
 ### Authoritative vs split-horizon
 
@@ -218,6 +224,9 @@ services:
       - DNS_UPSTREAM=${DNS_UPSTREAM:-1.1.1.1}
       - DNS_AUTHORITATIVE=${DNS_AUTHORITATIVE:-true}
       - ACME_DNS_ENABLED=${ACME_DNS_ENABLED:-false}
+      - HOSTS_RELOAD=${HOSTS_RELOAD:-15s}
+      - ZONE_RELOAD=${ZONE_RELOAD:-30s}
+      - DOCKERGEN_WAIT=${DOCKERGEN_WAIT:-5s:30s}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -299,11 +308,11 @@ Docker will automatically pull the correct variant for your host.
    - `/etc/coredns/zones/db.<DOMAIN>` — authoritative SOA / NS / A / wildcard zone file
    - `/etc/coredns/hosts` — empty seed file, populated at runtime
 
-2. **docker-gen** starts in the background, watches `/var/run/docker.sock`, and rewrites `/etc/coredns/hosts` on every container start or stop (5 s–30 s debounce).
+2. **docker-gen** starts in the background, watches `/var/run/docker.sock`, and rewrites `/etc/coredns/hosts` on every container start or stop (`DOCKERGEN_WAIT` debounce, default `5s:30s`).
 
 3. **CoreDNS** starts and serves:
    - `*.DOMAIN` → `HOST_IP` (wildcard zone, Traefik routes by `Host()` header)
-   - Container names → container IPs (via hosts file, reloaded every 15 s)
+   - Container names → container IPs (via hosts file, reloaded every `HOSTS_RELOAD`, default `15s`)
    - All other queries → upstream resolver (default: `1.1.1.1`)
 
 4. Both processes run under the same entrypoint script. A shared `trap` on `SIGTERM`/`SIGINT` ensures a clean shutdown of both processes when the container stops.

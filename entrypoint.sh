@@ -9,6 +9,12 @@ set -e
 DNS_UPSTREAM="${DNS_UPSTREAM:-1.1.1.1}"
 DNS_AUTHORITATIVE="${DNS_AUTHORITATIVE:-true}"
 ACME_DNS_ENABLED="${ACME_DNS_ENABLED:-false}"
+# Reload intervals — how often CoreDNS re-reads files changed by docker-gen.
+HOSTS_RELOAD="${HOSTS_RELOAD:-15s}"
+ZONE_RELOAD="${ZONE_RELOAD:-30s}"
+# docker-gen debounce — wait at least MIN before rewriting, at most MAX.
+DOCKERGEN_WAIT="${DOCKERGEN_WAIT:-5s:30s}"
+export HOSTS_RELOAD ZONE_RELOAD DOCKERGEN_WAIT
 
 echo "=== DNS Resolver (CoreDNS + docker-gen) ==="
 echo "  Domain       : ${DOMAIN}"
@@ -16,6 +22,9 @@ echo "  Host IP      : ${HOST_IP}"
 echo "  Upstream DNS : ${DNS_UPSTREAM}"
 echo "  Authoritative: ${DNS_AUTHORITATIVE}"
 echo "  ACME DNS-01  : ${ACME_DNS_ENABLED}"
+echo "  Hosts reload : ${HOSTS_RELOAD}  (CoreDNS re-reads /etc/coredns/hosts)"
+echo "  Zone reload  : ${ZONE_RELOAD}  (CoreDNS re-reads the zone file)"
+echo "  docker-gen   : wait ${DOCKERGEN_WAIT}  (min:max debounce)"
 
 # ── Zone serial — date-based (YYYYMMDDNN) ──────────────────────────────────
 SERIAL="$(date -u +'%Y%m%d%H')"
@@ -58,7 +67,7 @@ envsubst '${DOMAIN} ${HOST_IP} ${SERIAL}' \
     > "/etc/coredns/zones/db.${DOMAIN}"
 
 # ── Generate Corefile ──────────────────────────────────────────────────────
-envsubst '${DOMAIN} ${DNS_UPSTREAM} ${DNS_DOMAIN_FORWARD} ${ACME_DNS_BLOCK}' \
+envsubst '${DOMAIN} ${DNS_UPSTREAM} ${DNS_DOMAIN_FORWARD} ${ACME_DNS_BLOCK} ${HOSTS_RELOAD} ${ZONE_RELOAD}' \
     < /templates/Corefile.template \
     > /etc/coredns/Corefile
 
@@ -71,7 +80,7 @@ echo "=========================="
 
 # Start docker-gen in the background — watches Docker socket and rewrites the
 # hosts file on every container start/stop (5 s debounce, 30 s max delay).
-docker-gen -watch -wait 5s:30s /templates/hosts.tmpl /etc/coredns/hosts &
+docker-gen -watch -wait "${DOCKERGEN_WAIT}" /templates/hosts.tmpl /etc/coredns/hosts &
 DOCKER_GEN_PID=$!
 echo "docker-gen started (PID ${DOCKER_GEN_PID})"
 
