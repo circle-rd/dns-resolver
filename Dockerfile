@@ -18,7 +18,7 @@ COPY --from=coredns-bin /coredns /usr/local/bin/coredns
 COPY --from=docker-gen-bin /usr/local/bin/docker-gen /usr/local/bin/docker-gen
 
 # Bundle templates and entrypoint — all generated at container startup
-COPY entrypoint.sh Corefile.template zone.template /templates/
+COPY entrypoint.sh Corefile.template zone.template templates/hosts.tmpl /templates/
 RUN chmod +x /templates/entrypoint.sh \
     && mkdir -p /etc/coredns/zones
 

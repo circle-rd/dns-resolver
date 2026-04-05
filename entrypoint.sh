@@ -14,7 +14,7 @@ HOSTS_RELOAD="${HOSTS_RELOAD:-15s}"
 ZONE_RELOAD="${ZONE_RELOAD:-30s}"
 # docker-gen debounce — wait at least MIN before rewriting, at most MAX.
 DOCKERGEN_WAIT="${DOCKERGEN_WAIT:-5s:30s}"
-export HOSTS_RELOAD ZONE_RELOAD DOCKERGEN_WAIT
+export DNS_UPSTREAM HOSTS_RELOAD ZONE_RELOAD DOCKERGEN_WAIT
 
 echo "=== DNS Resolver (CoreDNS + docker-gen) ==="
 echo "  Domain       : ${DOMAIN}"
