@@ -4,7 +4,7 @@ seo:
   description: Internal DNS resolver combining CoreDNS and docker-gen — automatic container discovery for private networks.
 ---
 
-:::u-page-hero
+:::u-page-hero{.circle-hero}
 #title
 Internal DNS, zero config — containers resolve themselves.
 
@@ -21,7 +21,7 @@ Star on GitHub
 ::::
 :::
 
-:::u-page-section
+:::u-page-section{.circle-section}
 #title
 Why DNS Resolver?
 

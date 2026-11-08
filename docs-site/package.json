@@ -2,6 +2,7 @@
     "name": "dns-resolver-docs",
     "version": "1.0.0",
     "private": true,
+    "type": "module",
     "description": "Internal DNS resolver combining CoreDNS and docker-gen — automatic container discovery for private networks.",
     "scripts": {
         "dev": "nuxt dev",
@@ -10,8 +11,11 @@
         "preview": "nuxt preview"
     },
     "dependencies": {
-        "docus": "latest",
+        "docus": "5.15.0",
         "nuxt": "^4.0.0",
         "better-sqlite3": "^12.2.0"
+    },
+    "overrides": {
+        "nuxt-agent-discovery": "^0.8.1"
     }
 }
